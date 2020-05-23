@@ -80,7 +80,7 @@ func ValidPlacement(row, col, val int, board *[][]int) bool {
 		return false
 	}
 	return ValidSquare(row, col, val, board) && ValidRow(row, val, board) && ValidCol(col, val, board)
-	
+
 }
 
 // FindEmpty searches the board for the first empty space
@@ -227,13 +227,16 @@ func LayoutStart(gtx *layout.Context, th *material.Theme) {
 		solving = true
 		startTime = time.Now()
 	}
-	material.Clickable(gtx, startButton, func() {
-		layout.Inset{
+	style := material.ButtonLayoutStyle{
+		Inset: layout.Inset{
 			Top:    unit.Px(20),
 			Bottom: unit.Px(20),
-			Left:   unit.Px(420),
-			Right:  unit.Px(420),
-		}.Layout(gtx, func() {
+			Left:   unit.Px(200),
+			Right:  unit.Px(200),
+		},
+	}
+	style.Layout(gtx, startButton, func() {
+		material.Clickable(gtx, startButton, func() {
 			msg := "Start"
 			label := material.Caption(th, msg)
 			label.Alignment = text.Middle
@@ -260,7 +263,6 @@ func LayoutEnd(gtx *layout.Context, th *material.Theme) {
 		label.Layout(gtx)
 	})
 }
-
 
 func LayoutSudoku(gtx *layout.Context, th *material.Theme) {
 	grid := &layout.List{
