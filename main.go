@@ -1,6 +1,32 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+
+	"strconv"
+
+	"gioui.org/app"
+
+	"gioui.org/font/gofont"
+	"gioui.org/io/system"
+	"gioui.org/layout"
+
+	"gioui.org/unit"
+	"gioui.org/widget/material"
+)
+
+var testBoard = [][]int{
+	{8, 0, 0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 3, 6, 0, 0, 0, 0, 0},
+	{0, 7, 0, 0, 9, 0, 2, 0, 0},
+	{0, 5, 0, 0, 0, 7, 0, 0, 0},
+	{0, 0, 0, 0, 4, 5, 7, 0, 0},
+	{0, 0, 0, 1, 0, 0, 0, 3, 0},
+	{0, 0, 1, 0, 0, 0, 0, 6, 8},
+	{0, 0, 8, 5, 0, 0, 0, 1, 0},
+	{0, 9, 0, 0, 0, 0, 4, 0, 0},
+}
 
 // ValidRow searches row of board for val
 // outputs result to bool channel
@@ -124,21 +150,69 @@ func PrintBoard(board *[][]int) {
 	}
 }
 
+// UI CODE BEGINS HERE
+// !!!!!!!!!!!!!!!!!!!!
+// UI CODE BEGINS HERE
+
+// CreateWindow opens a new gioui window
+func CreateWindow() {
+	gofont.Register()
+	go func() {
+		w := app.NewWindow(app.Size(unit.Dp(450), unit.Dp(500)))
+		if err := WindowLoop(w); err != nil {
+			log.Fatal(err)
+		}
+	}()
+	app.Main()
+}
+
+// WindowLoop controls the drawing of the widgets
+func WindowLoop(w *app.Window) error {
+	th := material.NewTheme()
+	gtx := new(layout.Context)
+	for {
+		e := <-w.Events()
+		switch e := e.(type) {
+		case system.DestroyEvent:
+			return e.Err
+		case system.FrameEvent:
+			gtx.Reset(e.Queue, e.Config, e.Size)
+
+			LayoutGrid(gtx, th)
+
+			e.Frame(gtx.Ops)
+		}
+	}
+}
+
+// LayoutGrid creates a 2d layout List from the sudoku board
+func LayoutGrid(gtx *layout.Context, th *material.Theme) {
+	grid := &layout.List{
+		Axis:        layout.Vertical,
+		ScrollToEnd: false,
+	}
+	grid.Layout(gtx, 9, func(i int) {
+		l := &layout.List{
+			Axis:        layout.Horizontal,
+			ScrollToEnd: false,
+		}
+		l.Layout(gtx, 9, func(j int) {
+			layout.UniformInset(unit.Px(10)).Layout(gtx, func() {
+				msg := strconv.Itoa(testBoard[i][j])
+				label := material.Caption(th, msg)
+				label.Layout(gtx)
+			})
+		})
+	})
+}
+
 // driver for solving algorithm
 func main() {
-	testBoard := [][]int{
-		{8, 0, 0, 0, 0, 0, 0, 0, 0},
-		{0, 0, 3, 6, 0, 0, 0, 0, 0},
-		{0, 7, 0, 0, 9, 0, 2, 0, 0},
-		{0, 5, 0, 0, 0, 7, 0, 0, 0},
-		{0, 0, 0, 0, 4, 5, 7, 0, 0},
-		{0, 0, 0, 1, 0, 0, 0, 3, 0},
-		{0, 0, 1, 0, 0, 0, 0, 6, 8},
-		{0, 0, 8, 5, 0, 0, 0, 1, 0},
-		{0, 9, 0, 0, 0, 0, 4, 0, 0},
-	}
 	fmt.Println()
 	if !SolveBoard(&testBoard) {
 		fmt.Println("No Solution")
 	}
+
+	CreateWindow()
+
 }
