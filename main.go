@@ -36,46 +36,41 @@ var startTime time.Time
 var endTime time.Duration
 
 // ValidRow searches row of board for val
-// outputs result to bool channel
-func ValidRow(row, val int, board *[][]int, c chan<- bool) {
+// result is false if val is found
+func ValidRow(row, val int, board *[][]int) bool {
 	for i := 0; i < 9; i++ {
 		if val == (*board)[row][i] {
-			c <- false
-			return
+			return false
 		}
 	}
-	c <- true
+	return true
 }
 
 // ValidCol searches col of board for val
 // result is false if val is found
-// outputs result to bool channel
-func ValidCol(col, val int, board *[][]int, c chan<- bool) {
+func ValidCol(col, val int, board *[][]int) bool {
 	for i := 0; i < 9; i++ {
 		if val == (*board)[i][col] {
-			c <- false
-			return
+			return false
 		}
 	}
-	c <- true
+	return true
 }
 
 // ValidSquare searches 3x3 square of board that contains row/col for val
 // result is false if val is found
-// outputs result to bool channel
-func ValidSquare(row, col, val int, board *[][]int, c chan<- bool) {
+func ValidSquare(row, col, val int, board *[][]int) bool {
 	// set row and col to starting index of square
 	row = row / 3 * 3
 	col = col / 3 * 3
 	for i := row; i < row+3; i++ {
 		for j := col; j < col+3; j++ {
 			if val == (*board)[i][j] {
-				c <- false
-				return
+				return false
 			}
 		}
 	}
-	c <- true
+	return true
 }
 
 // ValidPlacement uses goroutines to check for valid square, row, and column simutaneously
@@ -84,12 +79,8 @@ func ValidPlacement(row, col, val int, board *[][]int) bool {
 	if (*board)[row][col] != 0 { // space must be empty
 		return false
 	}
-	// use go concurrency to perform all three checks simutaneously
-	results := make(chan bool, 3)
-	go ValidSquare(row, col, val, board, results)
-	go ValidRow(row, val, board, results)
-	go ValidCol(col, val, board, results)
-	return <-results && <-results && <-results
+	return ValidSquare(row, col, val, board) && ValidRow(row, val, board) && ValidCol(col, val, board)
+	
 }
 
 // FindEmpty searches the board for the first empty space
@@ -218,68 +209,81 @@ func LayoutGrid(gtx *layout.Context, th *material.Theme) {
 	sections := make([]layout.FlexChild, 2)
 	// Larger section consists of sudokuBoard elements in Lists
 	sections[0] = layout.Flexed(0.9, func() {
-		grid := &layout.List{
-			Axis:        layout.Vertical,
-			ScrollToEnd: false,
-		}
-		grid.Layout(gtx, 9, func(i int) {
-			l := &layout.List{
-				Axis:        layout.Horizontal,
-				ScrollToEnd: false,
-			}
-			l.Layout(gtx, 9, func(j int) {
-				layout.UniformInset(unit.Px(50)).Layout(gtx, func() {
-					msg := strconv.Itoa(sudokuBoard[i][j])
-					label := material.Caption(th, msg)
-					label.Alignment = text.Middle
-					label.Layout(gtx)
-				})
-			})
-		})
+		LayoutSudoku(gtx, th)
 	})
 	// Smaller section is for the program button and display
-	if !solving {
-		sections[1] = layout.Flexed(0.1, func() {
-			for startButton.Clicked(gtx) {
-				solving = true
-				startTime = time.Now()
-			}
-			material.Clickable(gtx, startButton, func() {
-				layout.Inset{
-					Top:    unit.Px(20),
-					Bottom: unit.Px(20),
-					Left:   unit.Px(420),
-					Right:  unit.Px(420),
-				}.Layout(gtx, func() {
-					msg := "Start"
-					label := material.Caption(th, msg)
-					label.Alignment = text.Middle
-					label.Layout(gtx)
-				})
-			})
+	sections[1] = layout.Flexed(0.1, func() {
+		if !solving {
+			LayoutStart(gtx, th)
+		} else {
+			LayoutEnd(gtx, th)
+		}
+	})
+	layout.Flex{Axis: layout.Vertical}.Layout(gtx, sections...)
+}
 
+func LayoutStart(gtx *layout.Context, th *material.Theme) {
+	for startButton.Clicked(gtx) {
+		solving = true
+		startTime = time.Now()
+	}
+	material.Clickable(gtx, startButton, func() {
+		layout.Inset{
+			Top:    unit.Px(20),
+			Bottom: unit.Px(20),
+			Left:   unit.Px(420),
+			Right:  unit.Px(420),
+		}.Layout(gtx, func() {
+			msg := "Start"
+			label := material.Caption(th, msg)
+			label.Alignment = text.Middle
+			label.Layout(gtx)
 		})
-	} else {
-		sections[1] = layout.Flexed(0.1, func() {
-			layout.Inset{
-				Top:    unit.Px(20),
-				Bottom: unit.Px(20),
-				Left:   unit.Px(200),
-				Right:  unit.Px(200),
-			}.Layout(gtx, func() {
-				var msg string
-				if solved {
-					msg = fmt.Sprintf("Took: %v", endTime)
-				} else {
-					msg = "Solving"
+	})
+}
+
+func LayoutEnd(gtx *layout.Context, th *material.Theme) {
+	layout.Inset{
+		Top:    unit.Px(20),
+		Bottom: unit.Px(20),
+		Left:   unit.Px(200),
+		Right:  unit.Px(200),
+	}.Layout(gtx, func() {
+		var msg string
+		if solved {
+			msg = fmt.Sprintf("Took: %v", endTime)
+		} else {
+			msg = "Solving"
+		}
+		label := material.Caption(th, msg)
+		label.Alignment = text.Middle
+		label.Layout(gtx)
+	})
+}
+
+
+func LayoutSudoku(gtx *layout.Context, th *material.Theme) {
+	grid := &layout.List{
+		Axis:        layout.Vertical,
+		ScrollToEnd: false,
+	}
+	grid.Layout(gtx, 9, func(i int) {
+		l := &layout.List{
+			Axis:        layout.Horizontal,
+			ScrollToEnd: false,
+		}
+		l.Layout(gtx, 9, func(j int) {
+			layout.UniformInset(unit.Px(50)).Layout(gtx, func() {
+				msg := strconv.Itoa(sudokuBoard[i][j])
+				if msg == "0" {
+					msg = " "
 				}
 				label := material.Caption(th, msg)
 				label.Alignment = text.Middle
 				label.Layout(gtx)
 			})
 		})
-	}
-	layout.Flex{Axis: layout.Vertical}.Layout(gtx, sections...)
+	})
 }
 
 // driver for solving algorithm
