@@ -19,17 +19,18 @@ import (
 	"gioui.org/widget/material"
 )
 
-var sudokuBoard = [][]int{
-	{8, 0, 0, 0, 0, 0, 0, 0, 0},
-	{0, 0, 3, 6, 0, 0, 0, 0, 0},
-	{0, 7, 0, 0, 9, 0, 2, 0, 0},
-	{0, 5, 0, 0, 0, 7, 0, 0, 0},
-	{0, 0, 0, 0, 4, 5, 7, 0, 0},
-	{0, 0, 0, 1, 0, 0, 0, 3, 0},
-	{0, 0, 1, 0, 0, 0, 0, 6, 8},
-	{0, 0, 8, 5, 0, 0, 0, 1, 0},
-	{0, 9, 0, 0, 0, 0, 4, 0, 0},
-}
+// var sudokuBoard = [][]int{
+// 	{8, 0, 0, 0, 0, 0, 0, 0, 0},
+// 	{0, 0, 3, 6, 0, 0, 0, 0, 0},
+// 	{0, 7, 0, 0, 9, 0, 2, 0, 0},
+// 	{0, 5, 0, 0, 0, 7, 0, 0, 0},
+// 	{0, 0, 0, 0, 4, 5, 7, 0, 0},
+// 	{0, 0, 0, 1, 0, 0, 0, 3, 0},
+// 	{0, 0, 1, 0, 0, 0, 0, 6, 8},
+// 	{0, 0, 8, 5, 0, 0, 0, 1, 0},
+// 	{0, 9, 0, 0, 0, 0, 4, 0, 0},
+// }
+var sudokuBoard = CreateBoard()
 var solving, solved bool
 var startButton = new(widget.Clickable)
 var startTime time.Time
@@ -144,27 +145,9 @@ func CreateBoard() [][]int {
 	return board
 }
 
-// PrintBoard outputs the board with grid seperation
-func PrintBoard(board *[][]int) {
-	for i := 0; i < 9; i++ {
-		for j := 0; j < 9; j++ {
-			if j == 2 || j == 5 {
-				fmt.Printf("%d|", (*board)[i][j])
-			} else {
-				fmt.Printf("%d ", (*board)[i][j])
-			}
-		}
-		if i == 2 || i == 5 {
-			fmt.Println("\n-----------------")
-		} else {
-			fmt.Println()
-		}
-	}
-}
-
-// UI CODE BEGINS HERE
-// !!!!!!!!!!!!!!!!!!!!
-// UI CODE BEGINS HERE
+// 
+// BEGINNING OF GUI CODE
+//
 
 // CreateWindow opens a new gioui window
 func CreateWindow() {
@@ -275,17 +258,29 @@ func LayoutSudoku(gtx *layout.Context, th *material.Theme) {
 			ScrollToEnd: false,
 		}
 		l.Layout(gtx, 9, func(j int) {
-			layout.UniformInset(unit.Px(50)).Layout(gtx, func() {
-				msg := strconv.Itoa(sudokuBoard[i][j])
-				if msg == "0" {
-					msg = " "
-				}
-				label := material.Caption(th, msg)
-				label.Alignment = text.Middle
-				label.Layout(gtx)
-			})
+			if !solving {
+				LayoutInput(gtx, th, i, j)
+			} else {
+				LayoutValues(gtx, th, i, j)
+			}
 		})
 	})
+}
+
+func LayoutValues(gtx *layout.Context, th *material.Theme, row, col int) {
+	layout.UniformInset(unit.Px(50)).Layout(gtx, func() {
+		msg := strconv.Itoa(sudokuBoard[row][col])
+		if msg == "0" {
+			msg = " "
+		}
+		label := material.Caption(th, msg)
+		label.Alignment = text.Middle
+		label.Layout(gtx)
+	})
+}
+
+func LayoutInput(gtx *layout.Context, th *material.Theme, row, col int) {
+	
 }
 
 // driver for solving algorithm
