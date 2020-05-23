@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"log"
 	"strconv"
+	"time"
+	// "image/color"
 
 	"gioui.org/app"
 	"gioui.org/font/gofont"
@@ -11,6 +13,8 @@ import (
 	"gioui.org/layout"
 	"gioui.org/text"
 	"gioui.org/unit"
+	// "gioui.org/f32"
+	// "gioui.org/op/paint"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
@@ -26,8 +30,10 @@ var sudokuBoard = [][]int{
 	{0, 0, 8, 5, 0, 0, 0, 1, 0},
 	{0, 9, 0, 0, 0, 0, 4, 0, 0},
 }
-var solving bool
+var solving, solved bool
 var startButton = new(widget.Clickable)
+var startTime time.Time
+var endTime time.Duration
 
 // ValidRow searches row of board for val
 // outputs result to bool channel
@@ -113,9 +119,14 @@ func FindEmpty(board *[][]int) (bool, int, int) {
 // tests digits 1-9 for first empty space found
 // when current solution becomes invalid, backtrack to last valid solution
 func SolveBoard(board *[][]int) bool {
+	for !solving {
+		continue
+	}
 	// search for empty space and set row, col as the index
 	empty, row, col := FindEmpty(board)
 	if !empty { // puzzle is finished
+		solved = true
+		endTime = time.Since(startTime)
 		return true
 	}
 	// consider digits 1-9
@@ -168,7 +179,7 @@ func PrintBoard(board *[][]int) {
 func CreateWindow() {
 	gofont.Register()
 	go func() {
-		w := app.NewWindow(app.Size(unit.Dp(450), unit.Dp(500)))
+		w := app.NewWindow(app.Size(unit.Dp(450), unit.Dp(500)), app.Title("Sudoku Solver"))
 		if err := WindowLoop(w); err != nil {
 			log.Fatal(err)
 		}
@@ -188,11 +199,18 @@ func WindowLoop(w *app.Window) error {
 		case system.FrameEvent:
 			gtx.Reset(e.Queue, e.Config, e.Size)
 
+			DrawGrid(gtx, th)
+
 			LayoutGrid(gtx, th)
 
 			e.Frame(gtx.Ops)
 		}
 	}
+}
+
+// DrawGrid draws lines for the sudoku grid
+func DrawGrid(gtx *layout.Context, th *material.Theme) {
+
 }
 
 // LayoutGrid creates a 2d nested List corresponding to the board
@@ -224,6 +242,7 @@ func LayoutGrid(gtx *layout.Context, th *material.Theme) {
 		sections[1] = layout.Flexed(0.1, func() {
 			for startButton.Clicked(gtx) {
 				solving = true
+				startTime = time.Now()
 			}
 			material.Clickable(gtx, startButton, func() {
 				layout.Inset{
@@ -248,14 +267,18 @@ func LayoutGrid(gtx *layout.Context, th *material.Theme) {
 				Left:   unit.Px(200),
 				Right:  unit.Px(200),
 			}.Layout(gtx, func() {
-				msg := "Solving"
+				var msg string
+				if solved {
+					msg = fmt.Sprintf("Took: %v", endTime)
+				} else {
+					msg = "Solving"
+				}
 				label := material.Caption(th, msg)
 				label.Alignment = text.Middle
 				label.Layout(gtx)
 			})
 		})
 	}
-
 	layout.Flex{Axis: layout.Vertical}.Layout(gtx, sections...)
 }
 
