@@ -9,11 +9,13 @@ import (
 	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
+	"gioui.org/text"
 	"gioui.org/unit"
+	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
-var testBoard = [][]int{
+var sudokuBoard = [][]int{
 	{8, 0, 0, 0, 0, 0, 0, 0, 0},
 	{0, 0, 3, 6, 0, 0, 0, 0, 0},
 	{0, 7, 0, 0, 9, 0, 2, 0, 0},
@@ -24,6 +26,8 @@ var testBoard = [][]int{
 	{0, 0, 8, 5, 0, 0, 0, 1, 0},
 	{0, 9, 0, 0, 0, 0, 4, 0, 0},
 }
+var solving bool
+var startButton = new(widget.Clickable)
 
 // ValidRow searches row of board for val
 // outputs result to bool channel
@@ -95,6 +99,16 @@ func FindEmpty(board *[][]int) (bool, int, int) {
 	return false, -1, -1
 }
 
+// Start waits to start solving until button is pressed
+// func Start(board *[][]int) {
+// 	for {
+// 		if solving {
+// 			SolveBoard(board)
+// 			break
+// 		}
+// 	}
+// }
+
 // SolveBoard recursively solve board and backtrack when necessary
 // tests digits 1-9 for first empty space found
 // when current solution becomes invalid, backtrack to last valid solution
@@ -102,7 +116,6 @@ func SolveBoard(board *[][]int) bool {
 	// search for empty space and set row, col as the index
 	empty, row, col := FindEmpty(board)
 	if !empty { // puzzle is finished
-		PrintBoard(board)
 		return true
 	}
 	// consider digits 1-9
@@ -182,29 +195,72 @@ func WindowLoop(w *app.Window) error {
 	}
 }
 
-// LayoutGrid creates a 2d layout List from the sudoku board
+// LayoutGrid creates a 2d nested List corresponding to the board
 func LayoutGrid(gtx *layout.Context, th *material.Theme) {
-	grid := &layout.List{
-		Axis:        layout.Vertical,
-		ScrollToEnd: false,
-	}
-	grid.Layout(gtx, 9, func(i int) {
-		l := &layout.List{
-			Axis:        layout.Horizontal,
+	sections := make([]layout.FlexChild, 2)
+	// Larger section consists of sudokuBoard elements in Lists
+	sections[0] = layout.Flexed(0.9, func() {
+		grid := &layout.List{
+			Axis:        layout.Vertical,
 			ScrollToEnd: false,
 		}
-		l.Layout(gtx, 9, func(j int) {
-			layout.UniformInset(unit.Px(10)).Layout(gtx, func() {
-				msg := strconv.Itoa(testBoard[i][j])
-				label := material.Caption(th, msg)
-				label.Layout(gtx)
+		grid.Layout(gtx, 9, func(i int) {
+			l := &layout.List{
+				Axis:        layout.Horizontal,
+				ScrollToEnd: false,
+			}
+			l.Layout(gtx, 9, func(j int) {
+				layout.UniformInset(unit.Px(50)).Layout(gtx, func() {
+					msg := strconv.Itoa(sudokuBoard[i][j])
+					label := material.Caption(th, msg)
+					label.Alignment = text.Middle
+					label.Layout(gtx)
+				})
 			})
 		})
 	})
+	// Smaller section is for the program button and display
+	if !solving {
+		sections[1] = layout.Flexed(0.1, func() {
+			for startButton.Clicked(gtx) {
+				solving = true
+			}
+			material.Clickable(gtx, startButton, func() {
+				layout.Inset{
+					Top:    unit.Px(20),
+					Bottom: unit.Px(20),
+					Left:   unit.Px(420),
+					Right:  unit.Px(420),
+				}.Layout(gtx, func() {
+					msg := "Start"
+					label := material.Caption(th, msg)
+					label.Alignment = text.Middle
+					label.Layout(gtx)
+				})
+			})
+
+		})
+	} else {
+		sections[1] = layout.Flexed(0.1, func() {
+			layout.Inset{
+				Top:    unit.Px(20),
+				Bottom: unit.Px(20),
+				Left:   unit.Px(200),
+				Right:  unit.Px(200),
+			}.Layout(gtx, func() {
+				msg := "Solving"
+				label := material.Caption(th, msg)
+				label.Alignment = text.Middle
+				label.Layout(gtx)
+			})
+		})
+	}
+
+	layout.Flex{Axis: layout.Vertical}.Layout(gtx, sections...)
 }
 
 // driver for solving algorithm
 func main() {
-	go SolveBoard(&testBoard)
+	go SolveBoard(&sudokuBoard)
 	CreateWindow()
 }
