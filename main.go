@@ -3,15 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
-
 	"strconv"
 
 	"gioui.org/app"
-
 	"gioui.org/font/gofont"
 	"gioui.org/io/system"
 	"gioui.org/layout"
-
 	"gioui.org/unit"
 	"gioui.org/widget/material"
 )
@@ -208,11 +205,6 @@ func LayoutGrid(gtx *layout.Context, th *material.Theme) {
 
 // driver for solving algorithm
 func main() {
-	fmt.Println()
-	if !SolveBoard(&testBoard) {
-		fmt.Println("No Solution")
-	}
-
+	go SolveBoard(&testBoard)
 	CreateWindow()
-
 }
