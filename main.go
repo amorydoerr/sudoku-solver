@@ -5,6 +5,7 @@ import (
 	"log"
 	"strconv"
 	"time"
+
 	// "image/color"
 
 	"gioui.org/app"
@@ -13,25 +14,27 @@ import (
 	"gioui.org/layout"
 	"gioui.org/text"
 	"gioui.org/unit"
+
 	// "gioui.org/f32"
 	// "gioui.org/op/paint"
 	"gioui.org/widget"
 	"gioui.org/widget/material"
 )
 
-// var sudokuBoard = [][]int{
-// 	{8, 0, 0, 0, 0, 0, 0, 0, 0},
-// 	{0, 0, 3, 6, 0, 0, 0, 0, 0},
-// 	{0, 7, 0, 0, 9, 0, 2, 0, 0},
-// 	{0, 5, 0, 0, 0, 7, 0, 0, 0},
-// 	{0, 0, 0, 0, 4, 5, 7, 0, 0},
-// 	{0, 0, 0, 1, 0, 0, 0, 3, 0},
-// 	{0, 0, 1, 0, 0, 0, 0, 6, 8},
-// 	{0, 0, 8, 5, 0, 0, 0, 1, 0},
-// 	{0, 9, 0, 0, 0, 0, 4, 0, 0},
-// }
-var sudokuBoard = CreateBoard()
-var solving, solved bool
+var sudokuBoard = [][]int{
+	{8, 0, 0, 0, 0, 0, 0, 0, 0},
+	{0, 0, 3, 6, 0, 0, 0, 0, 0},
+	{0, 7, 0, 0, 9, 0, 2, 0, 0},
+	{0, 5, 0, 0, 0, 7, 0, 0, 0},
+	{0, 0, 0, 0, 4, 5, 7, 0, 0},
+	{0, 0, 0, 1, 0, 0, 0, 3, 0},
+	{0, 0, 1, 0, 0, 0, 0, 6, 8},
+	{0, 0, 8, 5, 0, 0, 0, 1, 0},
+	{0, 9, 0, 0, 0, 0, 4, 0, 0},
+}
+
+// var sudokuBoard = CreateBoard()
+var solving, solved, failed bool
 var startButton = new(widget.Clickable)
 var startTime time.Time
 var endTime time.Duration
@@ -97,16 +100,6 @@ func FindEmpty(board *[][]int) (bool, int, int) {
 	return false, -1, -1
 }
 
-// Start waits to start solving until button is pressed
-// func Start(board *[][]int) {
-// 	for {
-// 		if solving {
-// 			SolveBoard(board)
-// 			break
-// 		}
-// 	}
-// }
-
 // SolveBoard recursively solve board and backtrack when necessary
 // tests digits 1-9 for first empty space found
 // when current solution becomes invalid, backtrack to last valid solution
@@ -145,7 +138,7 @@ func CreateBoard() [][]int {
 	return board
 }
 
-// 
+//
 // BEGINNING OF GUI CODE
 //
 
@@ -153,7 +146,7 @@ func CreateBoard() [][]int {
 func CreateWindow() {
 	gofont.Register()
 	go func() {
-		w := app.NewWindow(app.Size(unit.Dp(450), unit.Dp(500)), app.Title("Sudoku Solver"))
+		w := app.NewWindow(app.Size(unit.Dp(425), unit.Dp(475)), app.Title("Sudoku Solver"))
 		if err := WindowLoop(w); err != nil {
 			log.Fatal(err)
 		}
@@ -211,12 +204,7 @@ func LayoutStart(gtx *layout.Context, th *material.Theme) {
 		startTime = time.Now()
 	}
 	style := material.ButtonLayoutStyle{
-		Inset: layout.Inset{
-			Top:    unit.Px(20),
-			Bottom: unit.Px(20),
-			Left:   unit.Px(200),
-			Right:  unit.Px(200),
-		},
+		Inset: layout.UniformInset(unit.Dp(10)),
 	}
 	style.Layout(gtx, startButton, func() {
 		material.Clickable(gtx, startButton, func() {
@@ -229,14 +217,11 @@ func LayoutStart(gtx *layout.Context, th *material.Theme) {
 }
 
 func LayoutEnd(gtx *layout.Context, th *material.Theme) {
-	layout.Inset{
-		Top:    unit.Px(20),
-		Bottom: unit.Px(20),
-		Left:   unit.Px(200),
-		Right:  unit.Px(200),
-	}.Layout(gtx, func() {
+	layout.UniformInset(unit.Dp(10)).Layout(gtx, func() {
 		var msg string
-		if solved {
+		if failed {
+			msg = "No Solution"
+		} else if solved {
 			msg = fmt.Sprintf("Took: %v", endTime)
 		} else {
 			msg = "Solving"
@@ -267,8 +252,14 @@ func LayoutSudoku(gtx *layout.Context, th *material.Theme) {
 	})
 }
 
+
 func LayoutValues(gtx *layout.Context, th *material.Theme, row, col int) {
-	layout.UniformInset(unit.Px(50)).Layout(gtx, func() {
+	layout.Inset{
+		Top: unit.Dp(15),
+		Bottom: unit.Dp(15),
+		Left: unit.Dp(20),
+		Right: unit.Dp(20),
+	}.Layout(gtx, func() {
 		msg := strconv.Itoa(sudokuBoard[row][col])
 		if msg == "0" {
 			msg = " "
@@ -280,11 +271,24 @@ func LayoutValues(gtx *layout.Context, th *material.Theme, row, col int) {
 }
 
 func LayoutInput(gtx *layout.Context, th *material.Theme, row, col int) {
-	
+	layout.Inset{
+		Top: unit.Dp(15),
+		Bottom: unit.Dp(15),
+		Left: unit.Dp(20),
+		Right: unit.Dp(20),
+	}.Layout(gtx, func() {
+		field := new(widget.Editor)
+		field.Alignment = text.Middle
+		editor := material.Editor(th, "x")
+		editor.Layout(gtx, field)
+
+	})
 }
 
 // driver for solving algorithm
 func main() {
-	go SolveBoard(&sudokuBoard)
+	go func () {
+	failed = !SolveBoard(&sudokuBoard)
+	}()
 	CreateWindow()
 }
