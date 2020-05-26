@@ -1,6 +1,10 @@
 package main
 
-import "github.com/amorydoerr/sudoku-solver/sudoku"
+import (
+	"time"
+
+	"gioui.org/widget"
+)
 
 var sudokuBoard = [][]int{
 	{8, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -20,17 +24,10 @@ var startButton = new(widget.Clickable)
 var startTime time.Time
 var endTime time.Duration
 
-
-//
-// BEGINNING OF GUI CODE
-//
-
-
-
 // driver for solving algorithm
 func main() {
-	go func () {
-	failed = !SolveBoard(&sudokuBoard)
+	go func() {
+		failed = !SolveBoard(&sudokuBoard)
 	}()
 	CreateWindow()
 }
